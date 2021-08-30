@@ -1,6 +1,6 @@
-import { OWGamesEvents, OWListener } from "@overwolf/overwolf-api-ts";
 import { AppWindow } from "../AppWindow";
 import { windowNames } from "../consts";
+import SummonerInfoFetcher from "./utils/summonerInfoFetcher";
 
 // The desktop window is the window displayed while Fortnite is not running.
 // In our case, our desktop window has no logic - it only displays static data.
@@ -19,22 +19,18 @@ const interestingFeatures = [
 
 class Desktop extends AppWindow {
   private static _instance: Desktop;
-  private _leagueGameEventsListener: OWGamesEvents;
   private _infoLog: HTMLElement;
+  private _runningLauncher: overwolf.games.launchers.LauncherInfo;
+  private _summonerInfoFetch: SummonerInfoFetcher;
 
   private constructor() {
     super(windowNames.desktop);
     this._infoLog = document.getElementById("infoLog");
+    this._summonerInfoFetch = new SummonerInfoFetcher(this.onInfoUpdates);
 
-    this._leagueGameEventsListener = new OWGamesEvents(
-      {
-        onInfoUpdates: this.onInfoUpdates.bind(this),
-        onNewEvents: this.onInfoUpdates.bind(this),
-      },
-      interestingFeatures
-    );
+    this.onInfoUpdates("hello world1");
 
-    this.onInfoUpdates("hello world");
+    this.getLauncherInfo();
   }
 
   public static instance() {
@@ -45,8 +41,19 @@ class Desktop extends AppWindow {
     return this._instance;
   }
 
-  public run() {
-    this._leagueGameEventsListener.start();
+  private getLauncherInfo() {
+    overwolf.games.launchers.getRunningLaunchersInfo((info) => {
+      this.onInfoUpdates("Getting running launchers: " + info.launchers.length);
+      if (info.launchers.length) {
+        this.onInfoUpdates("starting fetch");
+        this._runningLauncher = info.launchers[0];
+        const isStarted = this._summonerInfoFetch.start(info.launchers[0]);
+        this.onInfoUpdates(isStarted);
+      } else {
+        setTimeout(this.getLauncherInfo, 1000);
+        this.onInfoUpdates("waiting");
+      }
+    });
   }
 
   private onInfoUpdates(info) {

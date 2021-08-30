@@ -64,7 +64,7 @@
       {
         "event": "GameLaunch",
         "event_data": {
-          "game_ids": [10902]
+          "game_ids": [10902, 5426]
         },
         "start_minimized": false
       }
